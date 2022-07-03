@@ -24,7 +24,7 @@
     const newTodo = ref("");
 
     //若todos發生改變，更新localStorage資料
-    watch(todos.value, (newValue) => {
+    watch(() => [...todos.value], (newValue) => {
       todoStorage.save(newValue);
     });
 
@@ -58,6 +58,10 @@
       });
       newTodo.value = "";
     }
+	//處理刪除todo項目
+    function removeTodo(todo) {
+      todos.value = todos.value.filter((data) => data.id !== todo.id);
+    }
 
     return {
       todos,
@@ -65,18 +69,19 @@
       addTodo,
       remaining,
       allDone,
+      removeTodo,
     };
   }
 
   const { createApp, ref, watch, computed } = Vue;
   exports.app = createApp({
     setup() {
-      const { todos, newTodo, addTodo, ...restProps} = useBasicTodo();
+      const { todos, newTodo, addTodo, ...restProps } = useBasicTodo();
       return {
         todos,
         newTodo,
         addTodo,
-		...restProps
+        ...restProps,
       };
     },
   }).mount(".todoapp");
