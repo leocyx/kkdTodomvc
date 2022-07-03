@@ -24,9 +24,11 @@
     const newTodo = ref("");
 
     //若todos發生改變，更新localStorage資料
-    watch(() => [...todos.value], (newValue) => {
-      todoStorage.save(newValue);
-    });
+    watch(todos,(newValue) => {
+        todoStorage.save(newValue);
+      },
+	  { deep: true }
+    );
 
     //取得未勾選的todos陣列長度
     const remaining = computed(() => {
@@ -58,7 +60,7 @@
       });
       newTodo.value = "";
     }
-	//處理刪除todo項目
+    //處理刪除todo項目
     function removeTodo(todo) {
       todos.value = todos.value.filter((data) => data.id !== todo.id);
     }
@@ -72,17 +74,60 @@
       removeTodo,
     };
   }
+  function useEditTodo(removeTodo) {
+    const beforeEditCache = ref("");
+    const editedTodo = ref(null);
+	//暫存編輯前的內容title，並將原內容綁定editedTodo
+    function editTodo(todo) {
+      beforeEditCache.value = todo.title;
+      editedTodo.value = todo;
+    }
+	//處理完成編輯後動作
+    function doneEdit(todo) {
+      if (!editedTodo.value) {
+        return;
+      }
+      todo.title = todo.title.trim();
+      editedTodo.value = null;
+      if (!todo.title) {
+        removeTodo(todo);
+      }
+    }
+	//處理取消編輯後回復先前內容
+    function cancelEdit(todo) {
+      editedTodo.value = null;
+      todo.title = beforeEditCache.value;
+    }
 
+    return {
+      beforeEditCache,
+      editTodo,
+      editedTodo,
+      doneEdit,
+      cancelEdit,
+    };
+  }
   const { createApp, ref, watch, computed } = Vue;
   exports.app = createApp({
     setup() {
-      const { todos, newTodo, addTodo, ...restProps } = useBasicTodo();
+      const { todos, newTodo, addTodo, removeTodo, ...restProps } =
+        useBasicTodo();
+      const editFunctions = useEditTodo(removeTodo);
       return {
         todos,
         newTodo,
         addTodo,
+        removeTodo,
         ...restProps,
+        ...editFunctions,
       };
+    },
+    directives: {
+      "todo-focus": function (el, binding) {
+        if (binding.value) {
+          el.focus();
+        }
+      },
     },
   }).mount(".todoapp");
 })(window);
