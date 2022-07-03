@@ -24,10 +24,12 @@
     const newTodo = ref("");
 
     //若todos發生改變，更新localStorage資料
-    watch(todos,(newValue) => {
+    watch(
+      todos,
+      (newValue) => {
         todoStorage.save(newValue);
       },
-	  { deep: true }
+      { deep: true }
     );
 
     //取得未勾選的todos陣列長度
@@ -64,6 +66,10 @@
     function removeTodo(todo) {
       todos.value = todos.value.filter((data) => data.id !== todo.id);
     }
+    //處理清除所有已勾選項目
+    function removeCompleted() {
+      todos.value = filters.active(todos.value);
+    }
 
     return {
       todos,
@@ -72,17 +78,19 @@
       remaining,
       allDone,
       removeTodo,
+      removeCompleted,
     };
   }
+
   function useEditTodo(removeTodo) {
     const beforeEditCache = ref("");
     const editedTodo = ref(null);
-	//暫存編輯前的內容title，並將原內容綁定editedTodo
+    //暫存編輯前的內容title，並將原內容綁定editedTodo
     function editTodo(todo) {
       beforeEditCache.value = todo.title;
       editedTodo.value = todo;
     }
-	//處理完成編輯後動作
+    //處理完成編輯後動作
     function doneEdit(todo) {
       if (!editedTodo.value) {
         return;
@@ -93,7 +101,7 @@
         removeTodo(todo);
       }
     }
-	//處理取消編輯後回復先前內容
+    //處理取消編輯後回復先前內容
     function cancelEdit(todo) {
       editedTodo.value = null;
       todo.title = beforeEditCache.value;
@@ -107,19 +115,40 @@
       cancelEdit,
     };
   }
+
+  function useDynamicTodos(todos) {
+    const visibility = ref("all");
+    //取得visibility選項過濾後的todos資料
+    const filteredTodos = computed(() => {
+      return filters[visibility.value](todos.value);
+    });
+    return {
+      visibility,
+      filteredTodos,
+    };
+  }
+
   const { createApp, ref, watch, computed } = Vue;
   exports.app = createApp({
     setup() {
       const { todos, newTodo, addTodo, removeTodo, ...restProps } =
         useBasicTodo();
       const editFunctions = useEditTodo(removeTodo);
+      const dynamicTodos = useDynamicTodos(todos);
+
+      const pluralize = (word, count) => {
+        return word + (count === 1 ? "" : "s");
+      };
+
       return {
         todos,
         newTodo,
         addTodo,
         removeTodo,
+        pluralize,
         ...restProps,
         ...editFunctions,
+        ...dynamicTodos,
       };
     },
     directives: {
